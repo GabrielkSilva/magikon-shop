@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Magikon Shop
 
-# Run and deploy your AI Studio app
+A dark-themed product management dashboard inspired by Supabase's design system.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1JBRbiLlm4QD0bm7POtDORNOStP_emEhX
+- **Product Management**: Add, edit, delete products with images.
+- **Category Management**: Organize products into categories.
+- **Firebase Integration**: Uses Firestore for real-time data persistence.
+- **ImgBB Integration**: Handles image uploads via ImgBB API.
+- **Supabase-like UI**: sleek dark mode interface using Tailwind CSS.
 
-## Run Locally
+## Setup
 
-**Prerequisites:**  Node.js
+1. This project uses Firebase. Ensure you have the config keys in `services/firebase.ts` or local storage.
+2. For image uploads, an ImgBB API key is required.
 
+## Tech Stack
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- React 18
+- TypeScript
+- Tailwind CSS
+- Firebase (Firestore)
+- Vite
