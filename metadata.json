@@ -1,0 +1,5 @@
+{
+  "name": "Supabase-style Firebase Store",
+  "description": "A sleek, dark-themed product and category manager using Firebase Firestore and Storage, inspired by Supabase's design language.",
+  "requestFramePermissions": []
+}
