@@ -198,46 +198,45 @@ function App() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 hover:shadow-xl hover:shadow-brand-900/10 transition-all duration-300 flex flex-col">
-              {/* Imagem */}
-              <div className="relative aspect-square bg-zinc-900 overflow-hidden">
+            <div key={product.id} className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 transition-all duration-300 flex flex-col">
+              {/* Imagem (Sem overlay) */}
+              <div className="aspect-square bg-zinc-900 overflow-hidden border-b border-zinc-800/50">
                 {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex items-center justify-center h-full text-zinc-600">
                     <ImageIcon size={32} />
                   </div>
                 )}
-                
-                {/* Ações Overlay */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                   <button 
-                    onClick={() => openProductModal(product)}
-                    className="p-2 bg-zinc-900 text-white rounded-full shadow-lg hover:bg-brand-600 transition-colors"
-                    title="Editar"
-                  >
-                    <Edit2 size={18} />
-                   </button>
-                   <button 
-                    onClick={() => handleDeleteProduct(product.id)}
-                    className="p-2 bg-zinc-900 text-red-500 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition-colors"
-                    title="Excluir"
-                  >
-                    <Trash2 size={18} />
-                   </button>
-                </div>
               </div>
               
-              {/* Infos */}
+              {/* Infos e Ações */}
               <div className="p-4 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h3 className="font-semibold text-white truncate text-base" title={product.name}>{product.name}</h3>
                 </div>
                 
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mt-auto pt-3">
                   <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
                     {getCategoryName(product.categoryId)}
                   </span>
+
+                  <div className="flex gap-1">
+                     <button 
+                      onClick={() => openProductModal(product)}
+                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                     </button>
+                     <button 
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                      title="Excluir"
+                    >
+                      <Trash2 size={16} />
+                     </button>
+                  </div>
                 </div>
               </div>
             </div>
