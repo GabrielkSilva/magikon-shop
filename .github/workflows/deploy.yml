@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-      - master # Garante que rode mesmo se a branch for master
-  workflow_dispatch: # Permite rodar manualmente clicando em 'Run workflow' na aba Actions
+      - master
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # Cache removido para evitar erro quando package-lock.json não existe
 
       - name: Install dependencies
         run: npm install
