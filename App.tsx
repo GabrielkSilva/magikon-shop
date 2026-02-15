@@ -60,7 +60,8 @@ function App() {
     } else {
       setEditingProduct(null);
       setProdName('');
-      setProdCategoryId('');
+      // Auto-seleciona a primeira categoria se existir
+      setProdCategoryId(categories.length > 0 ? categories[0].id : '');
       setProdImagePreview(null);
       setProdImageFile(null);
     }
@@ -199,8 +200,8 @@ function App() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {filteredProducts.map((product) => (
             <div key={product.id} className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 transition-all duration-300 flex flex-col">
-              {/* Imagem (Sem overlay) */}
-              <div className="aspect-square bg-zinc-900 overflow-hidden border-b border-zinc-800/50">
+              {/* Imagem (Proporção 21x9.5cm ~ 2.21:1) */}
+              <div className="aspect-[21/9.5] bg-zinc-900 overflow-hidden border-b border-zinc-800/50">
                 {product.imageUrl ? (
                   <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
