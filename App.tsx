@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Plus, Trash2, Search, Upload, Image as ImageIcon, PackageOpen, Edit2, FolderOpen, X } from 'lucide-react';
 import { Category, Product } from './types';
@@ -8,7 +8,7 @@ import { Modal } from './components/ui/Modal';
 import { 
   subscribeToCollection, 
   addItem, 
-  updateItem,
+  updateItem, 
   deleteItem, 
   uploadImage,
   PRODUCTS_COLLECTION, 
@@ -36,6 +36,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Estados para o Tooltip do nome
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeoutRef = useRef<any>(null);
+
   // Reseta o index se o produto mudar
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -43,8 +47,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const hasMultipleImages = images.length > 1;
 
+  // Handlers para o delay do tooltip (Agora no Card)
+  const handleMouseEnter = () => {
+    tooltipTimeoutRef.current = setTimeout(() => {
+      setShowTooltip(true);
+    }, 500); // 500ms de delay para aparecer
+  };
+
+  const handleMouseLeave = () => {
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+    setShowTooltip(false);
+  };
+
   return (
-    <div className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 transition-all duration-300 flex flex-col relative">
+    <div 
+      className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 transition-all duration-300 flex flex-col relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Container da Imagem */}
       <div className="relative aspect-[21/9.5] bg-zinc-900 overflow-hidden border-b border-zinc-800/50 group/image">
         
@@ -93,8 +116,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
       
       {/* Infos e Ações */}
       <div className="p-4 flex-1 flex flex-col">
-        <div className="flex justify-between items-start mb-2 gap-2">
-          <h3 className="font-semibold text-white truncate text-base" title={product.name}>{product.name}</h3>
+        <div className="flex justify-between items-start mb-2 gap-2 relative">
+          {/* Nome do Produto com Tooltip Customizado */}
+          <div className="relative max-w-full overflow-visible">
+            <h3 className="font-semibold text-white truncate text-base">
+              {product.name}
+            </h3>
+
+            {/* Tooltip Flutuante */}
+            {showTooltip && (
+              <div className="absolute bottom-full left-0 mb-2 w-max max-w-[220px] z-50 pointer-events-none">
+                <div className="bg-zinc-950 text-zinc-100 text-xs px-3 py-2 rounded-md border border-zinc-800 shadow-xl break-words whitespace-normal animate-in fade-in zoom-in-95 duration-200">
+                  {product.name}
+                  {/* Seta do tooltip */}
+                  <div className="absolute -bottom-1 left-4 w-2 h-2 bg-zinc-950 border-r border-b border-zinc-800 transform rotate-45"></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center justify-between mt-auto pt-3">
