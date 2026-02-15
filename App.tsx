@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
-import { Plus, Trash2, Search, Upload, Image as ImageIcon, PackageOpen, Edit2, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Search, Upload, Image as ImageIcon, PackageOpen, Edit2, FolderOpen, X } from 'lucide-react';
 import { Category, Product } from './types';
 import { Button } from './components/ui/Button';
 import { Input } from './components/ui/Input';
@@ -14,6 +14,115 @@ import {
   PRODUCTS_COLLECTION, 
   CATEGORIES_COLLECTION 
 } from './services/firebase';
+
+// --- Componente ProductCard (Atualizado) ---
+interface ProductCardProps { 
+  product: Product;
+  getCategoryName: (id: string) => string;
+  onEdit: (p: Product) => void;
+  onDelete: (id: string) => void;
+}
+
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  product, 
+  getCategoryName, 
+  onEdit, 
+  onDelete 
+}) => {
+  // Garante que temos um array de imagens. Se 'images' não existir, usa 'imageUrl'.
+  const images = product.images && product.images.length > 0 
+    ? product.images 
+    : (product.imageUrl ? [product.imageUrl] : []);
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Reseta o index se o produto mudar
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [product.id]);
+
+  const hasMultipleImages = images.length > 1;
+
+  return (
+    <div className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 transition-all duration-300 flex flex-col relative">
+      {/* Container da Imagem */}
+      <div className="relative aspect-[21/9.5] bg-zinc-900 overflow-hidden border-b border-zinc-800/50 group/image">
+        
+        {/* Renderiza TODAS as imagens empilhadas para pré-carregamento (Carrossel Instantâneo) */}
+        {images.length > 0 ? (
+          images.map((img, idx) => (
+            <img 
+              key={idx}
+              src={img} 
+              alt={`${product.name} - ${idx + 1}`} 
+              className={`
+                absolute inset-0 w-full h-full object-cover transition-opacity duration-300
+                ${currentImageIndex === idx ? 'opacity-100 z-10' : 'opacity-0 z-0'}
+              `} 
+            />
+          ))
+        ) : (
+          <div className="flex items-center justify-center h-full text-zinc-600">
+            <ImageIcon size={32} />
+          </div>
+        )}
+
+        {/* Toggles Numéricos (Canto Superior Esquerdo) */}
+        {hasMultipleImages && (
+          <div className="absolute top-2 left-2 flex gap-1 z-20">
+             {images.map((_, idx) => (
+               <button
+                 key={idx}
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   setCurrentImageIndex(idx);
+                 }}
+                 className={`
+                   w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all backdrop-blur-md border shadow-sm
+                   ${currentImageIndex === idx 
+                     ? 'bg-white text-black border-white scale-105 shadow-md' 
+                     : 'bg-black/60 text-white/90 border-transparent hover:bg-black/80 hover:border-zinc-500'}
+                 `}
+               >
+                 {idx + 1}
+               </button>
+             ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Infos e Ações */}
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="flex justify-between items-start mb-2 gap-2">
+          <h3 className="font-semibold text-white truncate text-base" title={product.name}>{product.name}</h3>
+        </div>
+        
+        <div className="flex items-center justify-between mt-auto pt-3">
+          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
+            {getCategoryName(product.categoryId)}
+          </span>
+
+          <div className="flex gap-1">
+             <button 
+              onClick={() => onEdit(product)}
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+              title="Editar"
+            >
+              <Edit2 size={16} />
+             </button>
+             <button 
+              onClick={() => onDelete(product.id)}
+              className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+              title="Excluir"
+            >
+              <Trash2 size={16} />
+             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   // --- Estados de Dados ---
@@ -32,8 +141,11 @@ function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [prodName, setProdName] = useState('');
   const [prodCategoryId, setProdCategoryId] = useState('');
-  const [prodImageFile, setProdImageFile] = useState<File | null>(null);
-  const [prodImagePreview, setProdImagePreview] = useState<string | null>(null);
+  
+  // Gestão de Imagens
+  const [prodNewFiles, setProdNewFiles] = useState<File[]>([]);
+  const [prodExistingImages, setProdExistingImages] = useState<string[]>([]); // URLs já salvas
+  const [prodPreviews, setProdPreviews] = useState<string[]>([]); // Previews locais das novas imagens
 
   // --- Estado do Formulário de Categoria ---
   const [catName, setCatName] = useState('');
@@ -51,29 +163,47 @@ function App() {
   // --- Handlers de Produto ---
 
   const openProductModal = (product?: Product) => {
+    // Limpa estados de imagem
+    setProdNewFiles([]);
+    setProdPreviews([]);
+
     if (product) {
       setEditingProduct(product);
       setProdName(product.name);
       setProdCategoryId(product.categoryId);
-      setProdImagePreview(product.imageUrl);
-      setProdImageFile(null);
+      
+      // Carrega imagens existentes (suporte a legado usando imageUrl se images estiver vazio)
+      const existing = product.images && product.images.length > 0 
+        ? product.images 
+        : (product.imageUrl ? [product.imageUrl] : []);
+        
+      setProdExistingImages(existing);
     } else {
       setEditingProduct(null);
       setProdName('');
-      // Auto-seleciona a primeira categoria se existir
       setProdCategoryId(categories.length > 0 ? categories[0].id : '');
-      setProdImagePreview(null);
-      setProdImageFile(null);
+      setProdExistingImages([]);
     }
     setIsProductModalOpen(true);
   };
 
   const handleProductImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProdImageFile(file);
-      setProdImagePreview(URL.createObjectURL(file));
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files) as File[];
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+
+      setProdNewFiles(prev => [...prev, ...files]);
+      setProdPreviews(prev => [...prev, ...newPreviews]);
     }
+  };
+
+  const removeNewImage = (index: number) => {
+    setProdNewFiles(prev => prev.filter((_, i) => i !== index));
+    setProdPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index: number) => {
+    setProdExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
@@ -82,20 +212,27 @@ function App() {
 
     setLoading(true);
     try {
-      let imageUrl = editingProduct?.imageUrl || '';
+      // 1. Upload das novas imagens
+      const uploadPromises = prodNewFiles.map(file => uploadImage(file));
+      const newImageUrls = await Promise.all(uploadPromises);
 
-      // Se houver nova imagem, faz upload
-      if (prodImageFile) {
-        imageUrl = await uploadImage(prodImageFile);
-      } else if (!imageUrl) {
-        // Placeholder
-        imageUrl = `https://picsum.photos/seed/${encodeURIComponent(prodName)}/400/400`;
+      // 2. Combinar imagens existentes com novas
+      const finalImages = [...prodExistingImages, ...newImageUrls];
+
+      // 3. Define a imagem "capa" (primeira da lista)
+      let mainImageUrl = finalImages.length > 0 ? finalImages[0] : '';
+      
+      // Fallback se nenhuma imagem for fornecida
+      if (finalImages.length === 0) {
+         mainImageUrl = `https://picsum.photos/seed/${encodeURIComponent(prodName)}/400/400`;
+         finalImages.push(mainImageUrl);
       }
 
       const productData = {
         name: prodName,
         categoryId: prodCategoryId,
-        imageUrl,
+        imageUrl: mainImageUrl, // Compatibilidade
+        images: finalImages,    // Multi-imagens
       };
 
       if (editingProduct) {
@@ -126,7 +263,6 @@ function App() {
     if (!catName) return;
     setLoading(true);
     try {
-      // Simplificado: Apenas nome e data (gerada no service)
       await addItem(CATEGORIES_COLLECTION, { 
         name: catName
       });
@@ -199,48 +335,13 @@ function App() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="group bg-card border border-zinc-800 rounded-xl overflow-hidden hover:border-brand-500/30 transition-all duration-300 flex flex-col">
-              {/* Imagem (Proporção 21x9.5cm ~ 2.21:1) */}
-              <div className="aspect-[21/9.5] bg-zinc-900 overflow-hidden border-b border-zinc-800/50">
-                {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-zinc-600">
-                    <ImageIcon size={32} />
-                  </div>
-                )}
-              </div>
-              
-              {/* Infos e Ações */}
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2 gap-2">
-                  <h3 className="font-semibold text-white truncate text-base" title={product.name}>{product.name}</h3>
-                </div>
-                
-                <div className="flex items-center justify-between mt-auto pt-3">
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
-                    {getCategoryName(product.categoryId)}
-                  </span>
-
-                  <div className="flex gap-1">
-                     <button 
-                      onClick={() => openProductModal(product)}
-                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
-                      title="Editar"
-                    >
-                      <Edit2 size={16} />
-                     </button>
-                     <button 
-                      onClick={() => handleDeleteProduct(product.id)}
-                      className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
-                      title="Excluir"
-                    >
-                      <Trash2 size={16} />
-                     </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ProductCard 
+              key={product.id}
+              product={product}
+              getCategoryName={getCategoryName}
+              onEdit={openProductModal}
+              onDelete={handleDeleteProduct}
+            />
           ))}
         </div>
       )}
@@ -252,39 +353,65 @@ function App() {
         title={editingProduct ? "Editar Produto" : "Novo Produto"}
       >
         <form onSubmit={handleProductSubmit} className="space-y-5">
-          {/* Upload de Imagem */}
-          <div className="w-full">
-            <label className="block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wider">Imagem do Produto</label>
-            <div 
-              className={`
-                relative border-2 border-dashed border-zinc-700 rounded-lg h-48 flex flex-col items-center justify-center text-center
-                hover:border-brand-500 hover:bg-zinc-800/50 transition-colors cursor-pointer group overflow-hidden
-                ${prodImagePreview ? 'border-brand-500/50 bg-zinc-900' : ''}
-              `}
-            >
+          {/* Upload de Imagem Multipla */}
+          <div className="w-full space-y-3">
+            <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider">Imagens do Produto</label>
+            
+            {/* Grid de Previews */}
+            {(prodExistingImages.length > 0 || prodPreviews.length > 0) && (
+              <div className="grid grid-cols-4 gap-3 mb-3">
+                {/* Imagens Existentes (vindas do BD) */}
+                {prodExistingImages.map((url, idx) => (
+                  <div key={`existing-${idx}`} className="relative group aspect-square rounded-md overflow-hidden border border-zinc-700">
+                    <img src={url} alt="Existente" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(idx)}
+                      className="absolute top-1 right-1 bg-black/60 hover:bg-red-500/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] text-white text-center py-0.5">
+                      Salva
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Novas Imagens (Preview local) */}
+                {prodPreviews.map((url, idx) => (
+                  <div key={`new-${idx}`} className="relative group aspect-square rounded-md overflow-hidden border border-brand-500/50">
+                    <img src={url} alt="Novo" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeNewImage(idx)}
+                      className="absolute top-1 right-1 bg-black/60 hover:bg-red-500/80 text-white rounded-full p-1 transition-all"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-brand-600/80 text-[10px] text-white text-center py-0.5">
+                      Nova
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Dropzone */}
+            <div className="relative border-2 border-dashed border-zinc-700 rounded-lg h-32 flex flex-col items-center justify-center text-center hover:border-brand-500 hover:bg-zinc-800/50 transition-colors cursor-pointer overflow-hidden">
               <input 
                 type="file" 
-                accept="image/*" 
+                accept="image/*"
+                multiple 
                 onChange={handleProductImageChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
               />
-              
-              {prodImagePreview ? (
-                <div className="w-full h-full relative">
-                   <img src={prodImagePreview} alt="Preview" className="w-full h-full object-contain" />
-                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-medium">
-                      Trocar Imagem
-                   </div>
+              <div className="flex flex-col items-center p-4 pointer-events-none">
+                <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 mb-2">
+                  <Upload size={16} />
                 </div>
-              ) : (
-                <div className="flex flex-col items-center p-4">
-                  <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 mb-3 group-hover:text-brand-400 transition-colors">
-                    <Upload size={20} />
-                  </div>
-                  <p className="text-sm text-zinc-300 font-medium">Clique para fazer upload</p>
-                  <p className="text-xs text-zinc-500 mt-1">PNG, JPG ou GIF</p>
-                </div>
-              )}
+                <p className="text-sm text-zinc-300 font-medium">Adicionar Imagens</p>
+                <p className="text-xs text-zinc-500 mt-1">Pode selecionar várias</p>
+              </div>
             </div>
           </div>
 

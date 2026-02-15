@@ -10,7 +10,8 @@ export interface Product {
   id: string;
   name: string;
   categoryId: string;
-  imageUrl: string;
+  imageUrl: string; // Mantido para compatibilidade (será a primeira imagem)
+  images?: string[]; // Novo campo para múltiplas imagens
   price?: number;
   stock?: number;
   createdAt: number;
