@@ -110,6 +110,22 @@ export const deleteItem = async (collectionName: string, id: string) => {
 };
 
 /**
+ * Converte um arquivo para Base64
+ */
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+/**
  * Faz upload da imagem para o ImgBB
  */
 export const uploadImage = async (file: File): Promise<string> => {
@@ -120,14 +136,27 @@ export const uploadImage = async (file: File): Promise<string> => {
     throw new Error("Chave de API do ImgBB não configurada.");
   }
 
-  const formData = new FormData();
-  formData.append('image', file);
-
   try {
+    // Converter para base64 pode ajudar com alguns bloqueadores e problemas de CORS
+    const base64Image = await fileToBase64(file);
+    const formData = new FormData();
+    formData.append('image', base64Image);
+
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
       method: 'POST',
       body: formData,
     });
+
+    if (!response.ok) {
+      let errorMessage = `Erro HTTP: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData?.error?.message || errorMessage;
+      } catch (e) {
+        // Ignora erro de JSON se a resposta não for JSON
+      }
+      throw new Error(errorMessage);
+    }
 
     const data = await response.json();
 
@@ -136,8 +165,14 @@ export const uploadImage = async (file: File): Promise<string> => {
     }
 
     return data.data.url;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro no upload ImgBB:", error);
-    throw new Error("Falha ao conectar com ImgBB.");
+    
+    // Tratamento específico para "Failed to fetch"
+    if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+      throw new Error("Falha de rede ao conectar com ImgBB. Verifique sua conexão, desative bloqueadores de anúncios (AdBlock, Brave Shields) ou verifique se a API Key é válida.");
+    }
+    
+    throw new Error(`Erro no upload: ${error.message || 'Erro desconhecido'}`);
   }
 };

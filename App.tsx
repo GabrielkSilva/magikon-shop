@@ -325,6 +325,21 @@ function App() {
   
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
+  // --- Paginação ---
+  const ITEMS_PER_PAGE = 16;
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Reseta a página quando a busca muda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const currentProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <Layout>
       {/* Barra de Ações e Busca */}
@@ -372,16 +387,58 @@ function App() {
          </div>
        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard 
-              key={product.id}
-              product={product}
-              getCategoryName={getCategoryName}
-              onEdit={openProductModal}
-              onDelete={handleDeleteProduct}
-            />
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {currentProducts.map((product) => (
+              <ProductCard 
+                key={product.id}
+                product={product}
+                getCategoryName={getCategoryName}
+                onEdit={openProductModal}
+                onDelete={handleDeleteProduct}
+              />
+            ))}
+          </div>
+
+          {/* Controles de Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-zinc-800 pt-6 mt-6">
+              <div className="text-sm text-zinc-400">
+                Mostrando <span className="font-medium text-white">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> a <span className="font-medium text-white">{Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)}</span> de <span className="font-medium text-white">{filteredProducts.length}</span> produtos
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium transition-colors ${
+                        currentPage === page 
+                          ? 'bg-brand-500 text-white' 
+                          : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
